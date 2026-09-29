@@ -1,378 +1,153 @@
 import { Link } from 'react-router-dom';
-import { BarChart3, BookOpen, CheckCircle2, ShieldCheck, Terminal, Cpu, Globe, Rocket, Zap, Layers, BarChart } from 'lucide-react';
+import { BarChart3, BookOpen, Bookmark, Cpu, Layers, Rocket, ShieldCheck, StickyNote, Terminal, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useEffect, useRef } from 'react';
+import ParticleBackground from '../components/ParticleBackground';
 
-function Background3D() {
-  const canvasRef = useRef(null);
+const FEATURES = [
+  { icon: BookOpen, title: 'Curated library', desc: 'Around 50 Java DSA problems across 17 topics, filterable by topic and difficulty.', tone: 'text-brand-300 bg-brand-500/10 ring-brand-500/20' },
+  { icon: Terminal, title: 'Run real Java', desc: 'Write code in a VS Code-style editor. The server compiles it and checks it against test cases.', tone: 'text-sky-300 bg-sky-500/10 ring-sky-500/20' },
+  { icon: BarChart3, title: 'Progress analytics', desc: 'Topic and difficulty breakdowns, streaks and a year-long activity heatmap.', tone: 'text-emerald-300 bg-emerald-500/10 ring-emerald-500/20' },
+  { icon: ShieldCheck, title: 'Secure accounts', desc: 'JWT authentication, hashed passwords and separate admin and user roles.', tone: 'text-pink-300 bg-pink-500/10 ring-pink-500/20' }
+];
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext('2d');
-    let animId;
-    let mouseX = 0, mouseY = 0;
+const EXTRAS = [
+  { icon: Cpu, text: 'Automatic judge' },
+  { icon: StickyNote, text: 'Notes per problem' },
+  { icon: Bookmark, text: 'Revision bookmarks' },
+  { icon: Layers, text: 'Admin problem editor' }
+];
 
-    const resize = () => {
-      canvas.width = window.innerWidth;
-      canvas.height = window.innerHeight;
-    };
-    resize();
-    window.addEventListener('resize', resize);
-
-    const onMouse = (e) => { mouseX = e.clientX; mouseY = e.clientY; };
-    window.addEventListener('mousemove', onMouse);
-
-    // Create particles
-    const count = 90;
-    const particles = Array.from({ length: count }, () => ({
-      x: Math.random() * window.innerWidth,
-      y: Math.random() * window.innerHeight,
-      z: Math.random() * 600 + 100,   // depth 100–700
-      vx: (Math.random() - 0.5) * 0.4,
-      vy: (Math.random() - 0.5) * 0.4,
-      vz: (Math.random() - 0.5) * 0.3,
-    }));
-
-    const project = (x, y, z, mx, my) => {
-      const fov = 600;
-      const dx = mx / window.innerWidth  - 0.5;
-      const dy = my / window.innerHeight - 0.5;
-      const px = x + dx * z * 0.08;
-      const py = y + dy * z * 0.08;
-      const scale = fov / (fov + z);
-      const sx = (px - window.innerWidth  / 2) * scale + window.innerWidth  / 2;
-      const sy = (py - window.innerHeight / 2) * scale + window.innerHeight / 2;
-      return { sx, sy, scale };
-    };
-
-    const draw = () => {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      // Move particles
-      particles.forEach(p => {
-        p.x += p.vx; p.y += p.vy; p.z += p.vz;
-        if (p.x < 0) p.x = canvas.width;
-        if (p.x > canvas.width)  p.x = 0;
-        if (p.y < 0) p.y = canvas.height;
-        if (p.y > canvas.height) p.y = 0;
-        if (p.z < 50)  p.z = 700;
-        if (p.z > 750) p.z = 50;
-      });
-
-      // Project & sort by depth (back to front)
-      const projected = particles.map(p => {
-        const { sx, sy, scale } = project(p.x, p.y, p.z, mouseX, mouseY);
-        return { ...p, sx, sy, scale };
-      }).sort((a, b) => a.z - b.z);
-
-      // Draw connections
-      const maxDist = 180;
-      for (let i = 0; i < projected.length; i++) {
-        for (let j = i + 1; j < projected.length; j++) {
-          const a = projected[i], b = projected[j];
-          const dx = a.sx - b.sx, dy = a.sy - b.sy;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < maxDist) {
-            const alpha = (1 - dist / maxDist) * 0.35 * Math.min(a.scale, b.scale) * 2;
-            ctx.beginPath();
-            ctx.moveTo(a.sx, a.sy);
-            ctx.lineTo(b.sx, b.sy);
-            ctx.strokeStyle = `rgba(139, 92, 246, ${alpha})`;
-            ctx.lineWidth = 0.8;
-            ctx.stroke();
-          }
-        }
-      }
-
-      // Draw particles
-      projected.forEach(p => {
-        const r = p.scale * 3.5;
-        const alpha = Math.min(p.scale * 1.2, 0.85);
-        const grad = ctx.createRadialGradient(p.sx, p.sy, 0, p.sx, p.sy, r * 2);
-        grad.addColorStop(0, `rgba(167, 139, 250, ${alpha})`);
-        grad.addColorStop(0.5, `rgba(124, 58, 237, ${alpha * 0.6})`);
-        grad.addColorStop(1, `rgba(139, 92, 246, 0)`);
-        ctx.beginPath();
-        ctx.arc(p.sx, p.sy, r * 2, 0, Math.PI * 2);
-        ctx.fillStyle = grad;
-        ctx.fill();
-      });
-
-      animId = requestAnimationFrame(draw);
-    };
-    draw();
-
-    return () => {
-      cancelAnimationFrame(animId);
-      window.removeEventListener('resize', resize);
-      window.removeEventListener('mousemove', onMouse);
-    };
-  }, []);
-
+function CodePreview() {
+  const k = 'text-purple-400';
+  const t = 'text-yellow-300';
+  const f = 'text-sky-400';
+  const n = 'text-pink-400';
   return (
-    <canvas
-      ref={canvasRef}
-      style={{
-        position: 'fixed',
-        top: 0, left: 0,
-        width: '100%', height: '100%',
-        zIndex: 0,
-        pointerEvents: 'none',
-      }}
-    />
+    <div className="relative">
+      <div className="absolute -right-10 -top-10 h-56 w-56 rounded-full bg-brand-600/30 blur-[90px]" aria-hidden="true" />
+      <div className="card relative overflow-hidden shadow-2xl shadow-black/50 lg:[transform:perspective(1000px)_rotateY(-6deg)_rotateX(4deg)]">
+        <div className="flex items-center gap-2 border-b border-white/5 bg-white/[0.03] px-4 py-3">
+          <span className="h-2.5 w-2.5 rounded-full bg-[#ff5f57]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#febc2e]" />
+          <span className="h-2.5 w-2.5 rounded-full bg-[#28c841]" />
+          <span className="ml-auto font-mono text-xs text-slate-500">TwoSum.java</span>
+        </div>
+        <pre className="overflow-x-auto p-6 font-mono text-[13px] leading-relaxed text-slate-300 sm:text-sm">
+          <span className={k}>public class</span> <span className={t}>TwoSum</span> {'{\n'}
+          {'  '}<span className={k}>public int</span>[] <span className={f}>solve</span>(<span className={k}>int</span>[] nums, <span className={k}>int</span> target) {'{\n'}
+          {'    '}Map&lt;Integer, Integer&gt; seen = <span className={k}>new</span> <span className={t}>HashMap</span>&lt;&gt;();{'\n'}
+          {'    '}<span className={k}>for</span> (<span className={k}>int</span> i = <span className={n}>0</span>; i &lt; nums.length; i++) {'{\n'}
+          {'      '}<span className={k}>int</span> need = target - nums[i];{'\n'}
+          {'      '}<span className={k}>if</span> (seen.containsKey(need)){'\n'}
+          {'        '}<span className={k}>return new int</span>[] {'{ seen.get(need), i };\n'}
+          {'      '}seen.put(nums[i], i);{'\n'}
+          {'    }\n'}
+          {'    '}<span className={k}>return new int</span>[0];{'\n'}
+          {'  }\n'}
+          {'}'}
+        </pre>
+        <div className="flex items-center gap-2 border-t border-white/5 bg-emerald-500/5 px-4 py-2.5 font-mono text-xs text-emerald-300">
+          <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" /> Accepted · 3/3 test cases passed
+        </div>
+      </div>
+    </div>
   );
 }
 
 export default function Home() {
   const { user } = useAuth();
+
   return (
-    <div className="home-container" style={{ position: 'relative' }}>
-      <Background3D />
-      <div style={{ position: 'relative', zIndex: 1 }}>
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="hero-content">
-          <div className="badge" style={{ 
-            display: 'inline-flex', 
-            alignItems: 'center',
-            gap: '8px',
-            padding: '6px 16px', 
-            background: 'rgba(124, 58, 237, 0.1)', 
-            borderRadius: '999px', 
-            fontSize: '13px', 
-            fontWeight: '700', 
-            color: '#a78bfa',
-            border: '1px solid rgba(124, 58, 237, 0.2)',
-            marginBottom: '24px'
-          }}>
-             <Zap size={14} /> V2.0 IS HERE
-          </div>
-          <h1 style={{ 
-            fontSize: 'clamp(3rem, 7vw, 5.5rem)', 
-            lineHeight: 1, 
-            fontWeight: 900, 
-            letterSpacing: '-2px',
-            marginBottom: '25px', 
-            background: 'linear-gradient(135deg, #fff 30%, #a78bfa 100%)', 
-            WebkitBackgroundClip: 'text', 
-            WebkitTextFillColor: 'transparent' 
-          }}>
-            Master Java <br />DSA with Precision.
-          </h1>
-          <p style={{ 
-            fontSize: '1.25rem', 
-            color: 'var(--text-muted)', 
-            maxWidth: '600px', 
-            marginBottom: '40px', 
-            lineHeight: 1.6,
-            fontWeight: 400
-          }}>
-            The most advanced practice platform for Java enthusiasts. Level up your coding skills with curated problems and real-time execution.
-          </p>
-          <div className="hero-buttons">
-            <Link to="/problems" className="solid-btn" style={{ padding: '18px 36px', borderRadius: '16px', fontSize: '18px', gap: '12px' }}>
-              <Rocket size={20} /> {user ? 'View Problems' : 'Get Started Free'}
-            </Link>
-            {!user && (
-              <Link to="/register" className="outline-btn" style={{ padding: '18px 36px', borderRadius: '16px', fontSize: '18px' }}>
-                Create Account
-              </Link>
-            )}
-            {user && (
-              <Link to="/dashboard" className="outline-btn" style={{ padding: '18px 36px', borderRadius: '16px', fontSize: '18px' }}>
-                My Dashboard
-              </Link>
-            )}
-          </div>
-        </div>
-        
-        <div className="hero-visual">
-          <div className="hero-panel" style={{ 
-            background: 'rgba(15, 14, 36, 0.8)', 
-            backdropFilter: 'blur(20px)', 
-            border: '1px solid rgba(255,255,255,0.08)',
-            transform: 'perspective(1000px) rotateY(-5deg) rotateX(5deg)',
-            transition: 'transform 0.5s ease'
-          }}>
-            <div className="terminal-header" style={{ background: 'rgba(255,255,255,0.03)', borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                <span style={{ width: '10px', height: '10px', background: '#ff5f57', borderRadius: '50%' }}></span>
-                <span style={{ width: '10px', height: '10px', background: '#febc2e', borderRadius: '50%' }}></span>
-                <span style={{ width: '10px', height: '10px', background: '#28c841', borderRadius: '50%' }}></span>
-              </div>
-              <div style={{ marginLeft: 'auto', fontSize: '12px', color: 'rgba(255,255,255,0.4)', fontFamily: 'var(--font-mono)' }}>
-                TwoSum.java
-              </div>
-            </div>
-            <pre style={{ 
-              fontSize: '14px', 
-              lineHeight: 1.6, 
-              padding: '24px', 
-              color: '#d1d5db',
-              fontFamily: 'var(--font-mono)',
-              margin: 0
-            }}>
-              <span style={{ color: '#9333ea' }}>public class</span> <span style={{ color: '#facc15' }}>TwoSum</span> {'{'}{'\n'}
-              {'  '}<span style={{ color: '#9333ea' }}>public int</span>[] <span style={{ color: '#60a5fa' }}>solve</span>(<span style={{ color: '#9333ea' }}>int</span>[] nums, <span style={{ color: '#9333ea' }}>int</span> target) {'{'}{'\n'}
-              {'    '}Map&lt;Integer, Integer&gt; map = <span style={{ color: '#9333ea' }}>new</span> <span style={{ color: '#facc15' }}>HashMap</span>&lt;&gt;();{'\n'}
-              {'    '}<span style={{ color: '#9333ea' }}>for</span> (<span style={{ color: '#9333ea' }}>int</span> i = <span style={{ color: '#f472b6' }}>0</span>; i &lt; nums.length; i++) {'{'}{'\n'}
-              {'      '}<span style={{ color: '#9333ea' }}>int</span> comp = target - nums[i];{'\n'}
-              {'      '}<span style={{ color: '#9333ea' }}>if</span> (map.containsKey(comp)) {'{'}{'\n'}
-              {'        '}<span style={{ color: '#9333ea' }}>return new int</span>[] {'{'} map.get(comp), i {'}'};{'\n'}
-              {'      '}{'}'}{'\n'}
-              {'      '}map.put(nums[i], i);{'\n'}
-              {'    '}{'}'}{'\n'}
-              {'    '}<span style={{ color: '#9333ea' }}>return new int</span>[] {'{}'};{'\n'}
-              {'  '}{'}'}{'\n'}
-              {'}'}
-            </pre>
-          </div>
-          {/* Decorative Elements */}
-          <div style={{ 
-            position: 'absolute', 
-            top: '-50px', 
-            right: '-50px', 
-            width: '200px', 
-            height: '200px', 
-            background: 'var(--primary)', 
-            filter: 'blur(100px)', 
-            opacity: 0.2, 
-            zIndex: -1 
-          }}></div>
-        </div>
-      </section>
+    <div className="relative overflow-hidden">
+      <ParticleBackground />
+      <div className="pointer-events-none absolute inset-x-0 top-0 h-[600px] bg-[radial-gradient(ellipse_at_top,rgba(124,58,237,0.18),transparent_60%)]" aria-hidden="true" />
 
-      {/* Features Grid */}
-      <section className="page-section">
-        <div className="section-header" style={{ textAlign: 'center', marginBottom: '80px' }}>
-          <p className="eyebrow" style={{ color: 'var(--primary)', letterSpacing: '4px', textTransform: 'uppercase', fontSize: '14px', marginBottom: '16px' }}>Capabilities</p>
-          <h2 style={{ fontSize: 'clamp(2.5rem, 4vw, 3.5rem)', fontWeight: 800, letterSpacing: '-1px' }}>Everything you need to master DSA.</h2>
-        </div>
-        <div className="features-grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))' }}>
-          <FeatureCard 
-            icon={<BookOpen size={32} />} 
-            title="Smart Library" 
-            desc="Explore hundreds of hand-picked DSA problems categorized by difficulty and topics." 
-            color="#a78bfa"
-          />
-          <FeatureCard 
-            icon={<Terminal size={32} />} 
-            title="Real-time Execution" 
-            desc="Integrated Java environment to write, compile, and test your solutions instantly." 
-            color="#60a5fa"
-          />
-          <FeatureCard 
-            icon={<BarChart size={32} />} 
-            title="Growth Tracking" 
-            desc="Visualize your progress with detailed analytics and consistency heatmaps." 
-            color="#4ade80"
-          />
-          <FeatureCard 
-            icon={<ShieldCheck size={32} />} 
-            title="Safe & Secure" 
-            desc="Enterprise-grade security for your code and profile data with JWT authentication." 
-            color="#f472b6"
-          />
-        </div>
-      </section>
-
-      {/* Value Proposition */}
-      <section className="page-section" style={{ 
-        background: 'linear-gradient(180deg, rgba(255,255,255,0.02) 0%, rgba(124, 58, 237, 0.05) 100%)', 
-        borderRadius: '60px', 
-        padding: '100px 7%',
-        border: '1px solid rgba(255,255,255,0.03)',
-        marginTop: '60px',
-        marginBottom: '60px'
-      }}>
-        <div className="split-section">
+      <div className="relative z-10">
+        {/* Hero */}
+        <section className="mx-auto grid max-w-7xl items-center gap-14 px-4 pb-20 pt-16 sm:px-6 lg:grid-cols-2 lg:px-8 lg:pb-28 lg:pt-24">
           <div>
-            <p className="eyebrow" style={{ color: 'var(--primary)' }}>WHY CHOOSE US?</p>
-            <h2 style={{ fontSize: ' clamp(2.5rem, 4vw, 4rem)', fontWeight: 800, marginTop: '10px' }}>Beyond simple <br />coding practice.</h2>
-            <p style={{ color: 'var(--text-muted)', fontSize: '1.2rem', marginTop: '24px', maxWidth: '500px' }}>
-              We provide a complete ecosystem designed for long-term skill retention and interview readiness.
+            <span className="inline-flex items-center gap-2 rounded-full border border-brand-500/25 bg-brand-500/10 px-4 py-1.5 text-xs font-bold tracking-wide text-brand-300">
+              <Zap size={14} /> Java DSA practice, tracked
+            </span>
+            <h1 className="mt-6 bg-linear-to-br from-white from-30% to-brand-400 bg-clip-text text-5xl font-black leading-[1.02] tracking-tight text-transparent sm:text-6xl xl:text-7xl">
+              Master Java DSA
+              <br />
+              with precision.
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-slate-400">
+              Solve curated problems in a real Java editor, get instant test-case feedback, and see your progress grow topic by topic.
             </p>
-            <div style={{ marginTop: '40px' }}>
-               <Link to="/problems" className="solid-btn" style={{ padding: '14px 28px' }}>Explore Problems →</Link>
+            <div className="mt-10 flex flex-wrap gap-4">
+              <Link to="/problems" className="btn-primary px-7 py-3.5 text-base">
+                <Rocket size={18} /> {user ? 'Continue solving' : 'Browse problems'}
+              </Link>
+              <Link to={user ? '/dashboard' : '/register'} className="btn-outline px-7 py-3.5 text-base">
+                {user ? 'My dashboard' : 'Create free account'}
+              </Link>
+            </div>
+            {!user && (
+              <p className="mt-5 text-sm text-slate-500">
+                Just looking? Log in with the demo account: <span className="font-mono text-slate-300">user@example.com / user123</span>
+              </p>
+            )}
+          </div>
+          <CodePreview />
+        </section>
+
+        {/* Features */}
+        <section className="mx-auto max-w-7xl px-4 py-20 sm:px-6 lg:px-8">
+          <div className="mx-auto mb-14 max-w-2xl text-center">
+            <p className="eyebrow">Features</p>
+            <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">Everything you need to practise DSA.</h2>
+          </div>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+            {FEATURES.map(({ icon: Icon, title, desc, tone }) => (
+              <div key={title} className="card p-7 transition hover:-translate-y-1 hover:border-brand-500/40">
+                <span className={`inline-flex rounded-2xl p-3.5 ring-1 ${tone}`}>
+                  <Icon size={26} />
+                </span>
+                <h3 className="mt-6 text-xl font-bold text-white">{title}</h3>
+                <p className="mt-2 leading-relaxed text-slate-400">{desc}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Why */}
+        <section className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+          <div className="grid items-center gap-12 rounded-[2.5rem] border border-white/5 bg-linear-to-b from-white/[0.03] to-brand-600/10 px-6 py-14 sm:px-12 lg:grid-cols-2 lg:py-20">
+            <div>
+              <p className="eyebrow">Why CodeTrack</p>
+              <h2 className="mt-4 text-3xl font-extrabold tracking-tight text-white sm:text-5xl">
+                More than a
+                <br />
+                list of questions.
+              </h2>
+              <p className="mt-5 max-w-md text-lg text-slate-400">
+                Notes, bookmarks and streaks help you keep what you learn, so interview prep keeps working.
+              </p>
+              <Link to="/problems" className="btn-primary mt-8">Explore problems →</Link>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              {EXTRAS.map(({ icon: Icon, text }) => (
+                <div key={text} className="flex items-center gap-4 rounded-2xl border border-white/5 bg-white/[0.03] p-5 font-semibold text-white transition hover:border-brand-500/50">
+                  <Icon size={20} className="text-brand-400" /> {text}
+                </div>
+              ))}
             </div>
           </div>
-          <div className="value-list" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px' }}>
-            <ValueItem text="Interactive Judge" icon={<Cpu size={20} />} />
-            <ValueItem text="Persistent Notes" icon={<BookOpen size={20} />} />
-            <ValueItem text="Performance Metrics" icon={<Layers size={20} />} />
-            <ValueItem text="Admin Dashboard" icon={<ShieldCheck size={20} />} />
-            <ValueItem text="Responsive Design" icon={<Globe size={20} />} />
-            <ValueItem text="Community Support" icon={<Rocket size={20} />} />
-          </div>
-        </div>
-      </section>
-
-      {/* Call to Action */}
-      {!user && (
-        <section className="page-section" style={{ textAlign: 'center', padding: '100px 0' }}>
-          <h2 style={{ fontSize: 'clamp(2rem, 5vw, 4rem)', fontWeight: 900, marginBottom: '24px' }}>Ready to start your journey?</h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '1.25rem', marginBottom: '40px' }}>Join thousands of developers mastering Java DSA today.</p>
-          <Link to="/register" className="solid-btn" style={{ padding: '20px 50px', fontSize: '20px', borderRadius: '20px' }}>
-            Create Free Account
-          </Link>
         </section>
-      )}
-      </div>
-    </div>
-  );
-}
 
-function FeatureCard({ icon, title, desc, color }) {
-  return (
-    <div className="feature-card">
-      <div style={{ 
-        width: '64px', 
-        height: '64px', 
-        borderRadius: '18px', 
-        background: `${color}15`, 
-        display: 'flex', 
-        alignItems: 'center', 
-        justifyContent: 'center',
-        color: color,
-        marginBottom: '24px',
-        border: `1px solid ${color}30`
-      }}>
-        {icon}
+        {/* CTA */}
+        {!user && (
+          <section className="px-4 py-24 text-center">
+            <h2 className="text-3xl font-black tracking-tight text-white sm:text-5xl">Ready to start?</h2>
+            <p className="mt-4 text-lg text-slate-400">Create a free account and solve your first problem in minutes.</p>
+            <Link to="/register" className="btn-primary mt-10 px-10 py-4 text-lg">Create free account</Link>
+          </section>
+        )}
+        {user && <div className="h-24" />}
       </div>
-      <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '12px', color: '#fff' }}>{title}</h3>
-      <p style={{ fontSize: '1rem', color: 'rgba(255,255,255,0.5)', lineHeight: 1.6 }}>{desc}</p>
-    </div>
-  );
-}
-
-function ValueItem({ text, icon }) {
-  return (
-    <div style={{ 
-      padding: '24px', 
-      background: 'rgba(255,255,255,0.03)', 
-      border: '1px solid rgba(255,255,255,0.06)', 
-      borderRadius: '24px', 
-      color: '#fff', 
-      fontWeight: '600', 
-      display: 'flex', 
-      alignItems: 'center', 
-      gap: '16px',
-      transition: 'all 0.3s ease',
-      cursor: 'default'
-    }}
-    onMouseEnter={(e) => {
-      e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-      e.currentTarget.style.borderColor = 'var(--primary)';
-      e.currentTarget.style.transform = 'translateY(-2px)';
-    }}
-    onMouseLeave={(e) => {
-      e.currentTarget.style.background = 'rgba(255,255,255,0.03)';
-      e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)';
-      e.currentTarget.style.transform = 'translateY(0)';
-    }}>
-       <div style={{ color: 'var(--primary)' }}>{icon || <CheckCircle2 size={20} />}</div>
-       {text}
     </div>
   );
 }

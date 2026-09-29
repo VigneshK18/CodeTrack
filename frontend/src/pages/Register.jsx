@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Lock, Mail, User, UserPlus } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { UserPlus, Mail, Lock, User } from 'lucide-react';
+import { Alert } from '../components/ui';
+import AuthLayout from '../components/AuthLayout';
 
 export default function Register() {
   const [form, setForm] = useState({ name: '', email: '', password: '' });
@@ -10,18 +12,13 @@ export default function Register() {
   const { register } = useAuth();
   const navigate = useNavigate();
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
-    
-    // Basic Validation
     if (!form.name.trim()) return setError('Full name is required');
-    if (!form.email.includes('@')) return setError('Please enter a valid email address');
-    if (form.password.length < 6) return setError('Password must be at least 6 characters long');
+    if (form.password.length < 6) return setError('Password must be at least 6 characters');
 
     setLoading(true);
     try {
@@ -34,72 +31,33 @@ export default function Register() {
     }
   }
 
+  const fields = [
+    { name: 'name', type: 'text', icon: User, placeholder: 'Full name', autoComplete: 'name' },
+    { name: 'email', type: 'email', icon: Mail, placeholder: 'Email address', autoComplete: 'email' },
+    { name: 'password', type: 'password', icon: Lock, placeholder: 'Password (min. 6 characters)', autoComplete: 'new-password', minLength: 6 }
+  ];
+
   return (
-    <section className="auth-section">
-      <form onSubmit={handleSubmit} className="auth-card" style={{ maxWidth: '420px', width: '100%' }}>
-        <div style={{ textAlign: 'center', marginBottom: '30px' }}>
-          <div style={{ width: '60px', height: '60px', background: 'rgba(124, 58, 237, 0.1)', borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 15px' }}>
-            <UserPlus size={30} color="var(--primary)" />
+    <AuthLayout eyebrow="Join CodeTrack" title="Create your account">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {fields.map(({ icon: Icon, ...f }) => (
+          <div key={f.name} className="relative">
+            <Icon size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input {...f} required value={form[f.name]} onChange={onChange} aria-label={f.placeholder} className="input pl-11" />
           </div>
-          <p className="eyebrow dark">JOIN CODETRACK</p>
-          <h1 style={{ color: '#0b0a1a' }}>Create Account</h1>
-        </div>
+        ))}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-          <div style={{ position: 'relative' }}>
-            <User size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
-            <input 
-              name="name" 
-              required
-              value={form.name} 
-              onChange={handleChange} 
-              placeholder="Full name" 
-              style={{ paddingLeft: '45px' }}
-            />
-          </div>
+        <Alert type="error">{error}</Alert>
 
-          <div style={{ position: 'relative' }}>
-            <Mail size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
-            <input 
-              name="email" 
-              type="email"
-              required
-              value={form.email} 
-              onChange={handleChange} 
-              placeholder="Email address" 
-              style={{ paddingLeft: '45px' }}
-            />
-          </div>
-
-          <div style={{ position: 'relative' }}>
-            <Lock size={18} style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#888' }} />
-            <input 
-              name="password" 
-              type="password" 
-              required
-              minLength={6}
-              value={form.password} 
-              onChange={handleChange} 
-              placeholder="Password (min. 6 characters)" 
-              style={{ paddingLeft: '45px' }}
-            />
-          </div>
-        </div>
-
-        {error && <p className="error-box" style={{ marginTop: '20px' }}>{error}</p>}
-        
-        <button 
-          className="solid-btn full" 
-          disabled={loading}
-          style={{ marginTop: '25px', height: '50px', fontSize: '16px' }}
-        >
-          {loading ? 'Creating Account...' : 'Register'}
+        <button className="btn-primary w-full py-3" disabled={loading}>
+          <UserPlus size={18} /> {loading ? 'Creating account...' : 'Create account'}
         </button>
-
-        <p style={{ textAlign: 'center', marginTop: '20px', color: '#666', fontSize: '14px' }}>
-          Already have an account? <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '700' }}>Login</Link>
-        </p>
       </form>
-    </section>
+
+      <p className="mt-6 text-center text-sm text-slate-400">
+        Already have an account?{' '}
+        <Link to="/login" className="font-semibold text-brand-400 hover:text-brand-300">Log in</Link>
+      </p>
+    </AuthLayout>
   );
 }

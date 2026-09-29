@@ -1,47 +1,31 @@
-import { createContext, useContext, useState, useEffect } from 'react';
-import { api } from '../services/api';
-import { clearAuth, getStoredUser, saveAuth, getToken } from '../services/api';
+import { createContext, useContext, useEffect, useState } from 'react';
+import { api, clearAuth, getStoredUser, getToken, saveAuth } from '../services/api';
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getStoredUser());
-  const [authChecked, setAuthChecked] = useState(false);
 
-  // On mount, verify the stored token is still valid against the backend
+  // On load, confirm the stored token is still valid; clear it if the server rejects it.
   useEffect(() => {
-    async function validateSession() {
-      const token = getToken();
-      if (token && user) {
-        try {
-          // Try a lightweight authenticated request to validate the session
-          await api.get('/progress/solved-ids');
-        } catch (err) {
-          // If it fails (401/403 or network error after backend restart), clear stale session
-          if (err.message === 'Request failed' || err.message?.includes('401') || err.message?.includes('403')) {
-            clearAuth();
-            setUser(null);
-          }
-        }
+    if (!getToken() || !user) return;
+    api.get('/auth/profile').catch((err) => {
+      if (err.status === 401 || err.status === 403) {
+        clearAuth();
+        setUser(null);
       }
-      setAuthChecked(true);
-    }
-    validateSession();
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function login(email, password) {
-    const data = await api.post('/auth/login', { email, password });
+  function applyAuth(data) {
     saveAuth(data);
     setUser({ userId: data.userId, name: data.name, email: data.email, role: data.role });
     return data;
   }
 
-  async function register(name, email, password) {
-    const data = await api.post('/auth/register', { name, email, password });
-    saveAuth(data);
-    setUser({ userId: data.userId, name: data.name, email: data.email, role: data.role });
-    return data;
-  }
+  const login = async (email, password) => applyAuth(await api.post('/auth/login', { email, password }));
+  const register = async (name, email, password) => applyAuth(await api.post('/auth/register', { name, email, password }));
 
   function logout() {
     clearAuth();
@@ -50,11 +34,7 @@ export function AuthProvider({ children }) {
 
   const isAdmin = user?.role === 'ADMIN';
 
-  return (
-    <AuthContext.Provider value={{ user, login, register, logout, isAdmin, authChecked }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={{ user, login, register, logout, isAdmin }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {

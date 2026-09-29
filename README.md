@@ -1,240 +1,172 @@
 # CodeTrack Java - Java DSA Practice Tracker
 
-CodeTrack Java is a full-stack Java DSA practice tracker built for a strong GitHub portfolio. It helps users explore Java coding problems, view solutions, mark problems as solved, save notes, bookmark questions, and track topic-wise progress.
+**HTML · Tailwind CSS · React · Node.js/Express · MySQL**
 
-This is not just a static portfolio page. It contains a React frontend, Spring Boot backend, JWT authentication, database models, CRUD APIs, admin panel, notes, bookmarks, and progress tracking.
+CodeTrack is a full-stack practice platform for Java data structures and algorithms. Students solve problems in a browser code editor, the server compiles and runs their Java code against test cases, and every solve feeds a progress dashboard with topic coverage, streaks and a year-long activity heatmap. Admins manage the problem library from their own console.
 
-## Tech Stack
+![Home page](docs/screenshots/01-home.png)
 
-### Frontend
-- React
-- Vite
-- React Router
-- CSS
-- Fetch API
+## Features
 
-### Backend
-- Java 17+
-- Spring Boot
-- Spring Security
-- JWT Authentication
-- Spring Data JPA
-- H2 Database for quick local run
-- MySQL profile for real deployment
+- **Problem library**: about 50 seeded problems across 17 topics, with search, topic and difficulty filters and pagination (MySQL `LIMIT/OFFSET`).
+- **Java code runner**: a Monaco (VS Code) editor. `POST /api/execution/run` compiles with `javac`, runs each test case with a 5-second time limit and 64 KB output cap, and returns a verdict per case.
+- **Auto-grading**: passing every stored test case marks the problem as solved for the logged-in user.
+- **Progress dashboard**: solved counts by difficulty, a Recharts topic-coverage chart, current and longest streak, and a GitHub-style heatmap.
+- **Notes and bookmarks**: a private note per problem and a revision list.
+- **Auth and roles**: JWT login, bcrypt-hashed passwords, and `USER` / `ADMIN` roles enforced by Express middleware.
+- **Admin console**: add, edit and delete problems, including test cases and starter code.
+- **Responsive UI**: built entirely with Tailwind CSS utilities and works down to phone width.
 
-## Main Features
+## Screenshots
 
-- User register and login
-- JWT-based authentication
-- Admin and user roles
-- Problem dashboard
-- Problem details page
-- Java solution viewer
-- Mark problem as solved
-- Progress dashboard
-- Topic-wise progress
-- Difficulty-wise progress
-- Notes for every problem
-- Bookmark system
-- Admin problem management
-- Add, edit, delete problems
-- Ready for GitHub deployment
+| Problem library | Code editor with test results |
+| --- | --- |
+| ![Problems](docs/screenshots/02-problems.png) | ![Editor](docs/screenshots/03-code-editor.png) |
 
-## Demo Login Accounts
+| Student dashboard | Admin dashboard |
+| --- | --- |
+| ![Dashboard](docs/screenshots/04-dashboard.png) | ![Admin](docs/screenshots/06-admin-dashboard.png) |
 
-When you run the backend, default accounts are created automatically.
+| Study notes | Admin problem editor | Mobile |
+| --- | --- | --- |
+| ![Notes](docs/screenshots/05-notes.png) | ![Edit problem](docs/screenshots/07-admin-edit-problem.png) | ![Mobile](docs/screenshots/08-mobile-dashboard.png) |
 
-### Admin
-```text
-Email: admin@example.com
-Password: admin123
-```
+## Tech stack
 
-### User
-```text
-Email: user@example.com
-Password: user123
-```
+| Layer | Technology |
+| --- | --- |
+| Markup | HTML5 (`frontend/index.html`) |
+| Styling | Tailwind CSS v4 with design tokens in `@theme` (`frontend/src/index.css`) |
+| Frontend | React 19, React Router 7, Vite, Recharts, Monaco Editor, Lucide icons |
+| Backend | Node.js 18+, Express 4, JSON Web Tokens, bcryptjs, Helmet, express-rate-limit |
+| Database | MySQL 8 via `mysql2` (connection pool, parameterised queries) |
+| Code execution | JDK 17 (`javac` / `java`) run as child processes |
+| Deployment | Render (Docker web service + static site), Aiven MySQL |
 
-## Folder Structure
+## Project structure
 
 ```text
-codetrack-java-dsa-practice-hub/
-├── backend/
-│   ├── src/main/java/com/codetrack/
-│   │   ├── config/
-│   │   ├── controller/
-│   │   ├── dto/
-│   │   ├── exception/
-│   │   ├── model/
-│   │   ├── repository/
-│   │   ├── security/
-│   │   ├── service/
-│   │   └── CodeTrackApplication.java
-│   ├── src/main/resources/
-│   └── pom.xml
-│
-├── frontend/
+CodeTrack/
+├── backend/                  Node.js + Express REST API
 │   ├── src/
-│   │   ├── components/
-│   │   ├── context/
-│   │   ├── pages/
-│   │   ├── services/
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── styles.css
-│   ├── package.json
-│   └── vite.config.js
-│
-├── database/
-│   └── schema.sql
-│
-└── README.md
+│   │   ├── config/           env + MySQL connection pool
+│   │   ├── controllers/      auth, problems, progress, notes, bookmarks, execution
+│   │   ├── middleware/       JWT auth, admin guard, error handler
+│   │   ├── routes/           all /api routes in one place
+│   │   ├── services/         Java code runner
+│   │   ├── db/setup.js       creates tables + seeds demo data
+│   │   ├── data/problems.json
+│   │   ├── app.js
+│   │   └── server.js
+│   ├── Dockerfile            Node 22 + OpenJDK 17
+│   └── .env.example
+├── frontend/                 React + Tailwind CSS (Vite)
+│   ├── index.html
+│   └── src/
+│       ├── components/       Navbar, CodeEditor, ActivityHeatmap, shared UI
+│       ├── pages/            Home, Problems, ProblemDetails, Dashboard, Notes...
+│       ├── context/          AuthContext
+│       ├── services/api.js   fetch wrapper with JWT
+│       └── index.css         Tailwind import + theme tokens
+├── database/schema.sql       MySQL tables, keys and indexes
+├── render.yaml               one-click Render Blueprint
+└── docs/screenshots/
 ```
 
-## How to Run Backend
+## Database schema
 
-Open terminal in the project root:
+Five InnoDB tables, all `utf8mb4`:
+
+- `users`: name, unique email, bcrypt hash, `ENUM('USER','ADMIN')` role
+- `problems`: statement, difficulty `ENUM`, tags, reference solution, starter code, `test_cases_json`, complexities, indexed on category and difficulty
+- `user_progress`, `notes`, `bookmarks`: one row per user and problem (`UNIQUE(user_id, problem_id)`), with foreign keys that `ON DELETE CASCADE`
+
+Upserts use `INSERT ... ON DUPLICATE KEY UPDATE`, and the dashboard statistics are computed with SQL `GROUP BY` aggregates. See [`database/schema.sql`](database/schema.sql).
+
+## Run locally
+
+**Requirements:** Node.js 18+, MySQL 8 (or MariaDB 10.6+), and JDK 17+ (`javac` on your PATH) for the code runner.
+
+### 1. Backend
 
 ```bash
 cd backend
-mvn spring-boot:run
+cp .env.example .env        # then set DB_USER / DB_PASSWORD
+npm install
+npm run dev                 # http://localhost:8080
 ```
 
-Backend runs at:
+On first start the API creates the `codetrack_java` database and tables, then seeds the problems and two demo accounts. No manual SQL is needed.
 
-```text
-http://localhost:8080
-```
-
-H2 database console:
-
-```text
-http://localhost:8080/h2-console
-```
-
-Use these H2 details:
-
-```text
-JDBC URL: jdbc:h2:mem:codetrack
-Username: sa
-Password: leave empty
-```
-
-## How to Run Frontend
-
-Open another terminal:
+### 2. Frontend
 
 ```bash
 cd frontend
+cp .env.example .env        # VITE_API_BASE_URL=http://localhost:8080/api
 npm install
-npm run dev
+npm run dev                 # http://localhost:5173
 ```
 
-Frontend runs at:
+### Demo accounts
 
-```text
-http://localhost:5173
-```
+| Role | Email | Password |
+| --- | --- | --- |
+| Student | `user@example.com` | `user123` |
+| Admin | `admin@example.com` | `admin123` |
 
-## Important Local Run Order
+The student account comes with some solved problems, notes and bookmarks so the dashboard isn't empty.
 
-Run backend first, then frontend.
+## API reference
 
-```text
-1. backend  -> http://localhost:8080
-2. frontend -> http://localhost:5173
-```
+All routes are prefixed with `/api`. 🔒 = requires `Authorization: Bearer <token>`; 👑 = admin only.
 
-## API Endpoints
+| Method | Route | Description |
+| --- | --- | --- |
+| POST | `/auth/register` | Create an account and return a JWT |
+| POST | `/auth/login` | Log in and return a JWT |
+| GET | `/auth/profile` 🔒 | Profile with solved, notes and bookmark counts |
+| GET | `/problems?q=&category=&difficulty=&page=&size=` | Paginated, filterable list |
+| GET | `/problems/categories` | Distinct topics |
+| GET | `/problems/:id` | One problem, with test cases and starter code |
+| POST / PUT / DELETE | `/problems[/:id]` 🔒👑 | Create, update or delete a problem |
+| POST | `/progress/solved/:problemId` 🔒 | Mark as solved |
+| GET | `/progress/solved-ids` 🔒 | IDs of solved problems |
+| GET | `/progress/stats` 🔒 | Dashboard statistics |
+| GET / POST / DELETE | `/notes[/:problemId]` 🔒 | Personal notes |
+| GET / POST / DELETE | `/bookmarks[/:problemId]`, `/bookmarks/ids` 🔒 | Revision bookmarks |
+| POST | `/execution/run` | `{ code, problemId?, input? }` compiles and runs Java |
+| GET | `/health` | API and database status |
 
-### Auth
-```text
-POST /api/auth/register
-POST /api/auth/login
-GET  /api/auth/profile
-```
+## Deployment (Render + Aiven MySQL)
 
-### Problems
-```text
-GET    /api/problems
-GET    /api/problems/{id}
-POST   /api/problems        ADMIN only
-PUT    /api/problems/{id}   ADMIN only
-DELETE /api/problems/{id}   ADMIN only
-```
+1. **Database:** create a free MySQL service on [Aiven](https://aiven.io) and note the host, port, user and password. The database is `defaultdb`.
+2. **Backend:** on Render, create a **Web Service** from this repo:
+   - Runtime **Docker**, Dockerfile path `./backend/Dockerfile`, Docker context `.`
+   - Environment: `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME=defaultdb`, `DB_SSL=true`, `JWT_SECRET` (long random string), `CLIENT_ORIGIN=<frontend URL>`
+   - Health check path `/api/health`
+3. **Frontend:** create a **Static Site** from this repo:
+   - Build command `cd frontend && npm ci && npm run build`, publish directory `frontend/dist`
+   - Environment: `VITE_API_BASE_URL=https://<your-api>.onrender.com/api`
+   - Under **Redirects/Rewrites**, add a rewrite from `/*` to `/index.html` so React Router deep links work.
 
-### Progress
-```text
-POST /api/progress/solved/{problemId}
-GET  /api/progress/solved-ids
-GET  /api/progress/stats
-```
+Alternatively, use **New → Blueprint** in Render, which reads [`render.yaml`](render.yaml) and sets up both services.
 
-### Notes
-```text
-POST   /api/notes/{problemId}
-GET    /api/notes/{problemId}
-GET    /api/notes
-DELETE /api/notes/{problemId}
-```
+> Render's free tier sleeps after 15 minutes of inactivity, so the first request after a pause can take about 30-50 seconds.
 
-### Bookmarks
-```text
-POST   /api/bookmarks/{problemId}
-GET    /api/bookmarks
-GET    /api/bookmarks/ids
-DELETE /api/bookmarks/{problemId}
-```
+## Security notes
 
-## MySQL Setup for Deployment
+- Passwords are hashed with bcrypt, and JWTs expire after one day by default.
+- Every SQL query uses placeholders, never string concatenation.
+- Helmet sets security headers, CORS only allows the configured frontend, and login, register and code execution are rate limited.
+- The code runner uses a time limit, a memory cap (`-Xmx128m`), an output cap and a stripped environment. It is **not** a full sandbox: for a public production service, run each submission in an isolated container (for example Docker with no network and CPU/memory limits).
 
-The default setup uses H2 so you can run it immediately. For MySQL, update `backend/src/main/resources/application-mysql.properties`.
+## Future enhancements
 
-Run with MySQL profile:
+- Test cases for every seeded problem (3 have them today)
+- Containerised sandbox per submission
+- Submission history and leaderboard
+- Discussion thread per problem
 
-```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=mysql
-```
+---
 
-## GitHub Push Commands
-
-```bash
-git init
-git add .
-git commit -m "Initial commit - CodeTrack Java DSA tracker"
-git branch -M main
-git remote add origin https://github.com/VigneshK18/codetrack-java-dsa-practice-hub.git
-git push -u origin main
-```
-
-## Deployment Suggestion
-
-- Frontend: Vercel or Netlify
-- Backend: Render or Railway
-- Database: Railway MySQL, Aiven MySQL, PlanetScale, or any hosted MySQL
-
-## Why This Project Is Stronger
-
-A simple static project only proves HTML, CSS, and basic JavaScript. This project proves full-stack development:
-
-- React frontend
-- Java Spring Boot backend
-- REST API design
-- Authentication
-- Authorization
-- Database modeling
-- CRUD operations
-- User-specific progress tracking
-- Admin panel
-- Real deployment structure
-
-## Future Enhancements
-
-- Online Java code execution
-- Monaco code editor
-- Streak calendar
-- Leaderboard
-- Problem discussion section
-- Test case runner
-- Resume-ready screenshots section
+Crafted by **Vignesh Kadiyala**

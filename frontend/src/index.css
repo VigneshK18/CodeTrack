@@ -1,0 +1,78 @@
+@import 'tailwindcss';
+
+/* Design tokens: Tailwind v4 turns these into utilities like bg-ink-950, text-brand-400, font-mono */
+@theme {
+  --font-sans: 'Outfit Variable', 'Outfit', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  --color-ink-950: #0b0a1a;
+  --color-ink-900: #100e24;
+  --color-ink-850: #14122e;
+  --color-ink-800: #1a183d;
+  --color-ink-700: #262352;
+
+  --color-brand-300: #c4b5fd;
+  --color-brand-400: #a78bfa;
+  --color-brand-500: #8b5cf6;
+  --color-brand-600: #7c3aed;
+  --color-brand-700: #6d28d9;
+
+  --shadow-glow: 0 10px 30px -10px rgb(124 58 237 / 0.6);
+
+  --animate-fade-in: fade-in 0.25s ease-out;
+  @keyframes fade-in {
+    from { opacity: 0; transform: translateY(-4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+}
+
+/* Reusable component classes built from Tailwind utilities (usable like any other utility) */
+@utility btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl px-5 py-2.5 text-sm font-semibold transition
+    focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-400
+    disabled:cursor-not-allowed disabled:opacity-50;
+}
+@utility btn-primary {
+  @apply btn bg-linear-to-br from-brand-600 to-purple-500 text-white shadow-glow hover:brightness-110;
+}
+@utility btn-outline {
+  @apply btn border border-white/10 bg-white/5 text-slate-100 hover:border-brand-500/60 hover:bg-white/10;
+}
+@utility btn-ghost {
+  @apply btn px-3 text-slate-300 hover:bg-white/5 hover:text-white;
+}
+@utility card {
+  @apply rounded-2xl border border-white/10 bg-ink-850/80 backdrop-blur;
+}
+@utility input {
+  @apply w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-slate-500
+    transition focus:border-brand-500 focus:bg-white/[0.07] focus:outline-none focus:ring-2 focus:ring-brand-500/30;
+}
+@utility label {
+  @apply mb-1.5 block text-xs font-semibold uppercase tracking-wider text-slate-400;
+}
+@utility eyebrow {
+  @apply text-xs font-bold uppercase tracking-[0.25em] text-brand-400;
+}
+@utility code-block {
+  @apply overflow-x-auto rounded-xl border border-white/5 bg-black/60 p-4 font-mono text-[13px] leading-relaxed text-emerald-300;
+}
+
+/* Split pane divider (react-split-pane v3) */
+.split-pane-divider {
+  background: rgb(255 255 255 / 0.06);
+  transition: background 0.2s;
+}
+.split-pane-divider:hover,
+.split-pane-divider:focus-visible {
+  background: var(--color-brand-600);
+  outline: none;
+}
+
+select option {
+  background: var(--color-ink-900);
+}
+
+::selection {
+  background: rgb(124 58 237 / 0.45);
+}

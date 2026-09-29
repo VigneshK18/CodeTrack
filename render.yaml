@@ -1,0 +1,45 @@
+# Render Blueprint: deploys the API (Docker) and the React frontend (static site).
+# In Render: New > Blueprint > pick this repo. Fill in the values marked sync: false when prompted.
+services:
+  - type: web
+    name: codetrack-api
+    runtime: docker
+    plan: free
+    region: singapore
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    healthCheckPath: /api/health
+    envVars:
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: defaultdb
+      - key: DB_SSL
+        value: "true"
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 1d
+      - key: CLIENT_ORIGIN
+        sync: false
+      - key: AUTO_SEED
+        value: "true"
+
+  - type: web
+    name: codetrack-java
+    runtime: static
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: ./frontend/dist
+    envVars:
+      - key: VITE_API_BASE_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

@@ -1,173 +1,136 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { BookOpen, ChevronRight, Code, Edit3, EyeOff, FileText, Search, StickyNote, User as UserIcon } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { BookOpen, User as UserIcon, ChevronRight, FileText, Code, Eye, EyeOff, Edit3 } from 'lucide-react';
+import { Alert, DifficultyBadge, EmptyState, PageContainer, PageHeader, Spinner } from '../components/ui';
 
 export default function Notes() {
   const { isAdmin } = useAuth();
   const [personalNotes, setPersonalNotes] = useState([]);
-  const [adminNotes, setAdminNotes] = useState([]);
-  const [activeTab, setActiveTab] = useState('admin');
+  const [studyNotes, setStudyNotes] = useState([]);
+  const [tab, setTab] = useState(isAdmin ? 'study' : 'personal');
+  const [filter, setFilter] = useState('');
+  const [open, setOpen] = useState({});
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
-  const [visibleSolutions, setVisibleSolutions] = useState({});
 
   useEffect(() => {
-    loadData();
+    Promise.all([api.get('/notes'), api.get('/problems?size=100')])
+      .then(([personal, library]) => {
+        setPersonalNotes(personal);
+        setStudyNotes((library.content || []).filter((p) => p.explanation || p.javaSolution));
+      })
+      .catch((err) => setError(err.message))
+      .finally(() => setLoading(false));
   }, []);
 
-  async function loadData() {
-    try {
-      const [personal, admin] = await Promise.all([
-        api.get('/notes'),
-        api.get('/problems?size=100')
-      ]);
-      setPersonalNotes(personal);
-      setAdminNotes((admin.content || admin).filter(p => p.explanation || p.javaSolution));
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
+  const filteredStudy = useMemo(() => {
+    const q = filter.trim().toLowerCase();
+    return q ? studyNotes.filter((n) => `${n.title} ${n.category}`.toLowerCase().includes(q)) : studyNotes;
+  }, [filter, studyNotes]);
 
-  const toggleSolution = (id) => {
-    setVisibleSolutions(prev => ({ ...prev, [id]: !prev[id] }));
-  };
+  const tabBtn = (key, label, Icon, count) => (
+    <button
+      onClick={() => setTab(key)}
+      className={`flex items-center gap-2 border-b-2 px-1 pb-3 text-sm font-semibold transition ${
+        tab === key ? 'border-brand-500 text-white' : 'border-transparent text-slate-400 hover:text-white'
+      }`}
+    >
+      <Icon size={16} /> {label}
+      <span className="rounded-full bg-white/5 px-2 text-xs text-slate-400">{count}</span>
+    </button>
+  );
 
   return (
-    <section className="page-section">
-      <div style={{ marginBottom: '40px' }}>
-        <p className="eyebrow dark">{isAdmin ? 'CONTENT MANAGEMENT' : 'KNOWLEDGE BASE'}</p>
-        <h1>{isAdmin ? 'Notes & Materials Admin' : 'Study Center'}</h1>
-        <p style={{ color: 'var(--text-muted)' }}>
-          {isAdmin 
-            ? 'Review and manage the study materials and official explanations provided to students.' 
-            : 'Access official Java study materials and your personal learning log.'}
-        </p>
+    <PageContainer>
+      <PageHeader
+        eyebrow={isAdmin ? 'Content management' : 'Knowledge base'}
+        title={isAdmin ? 'Study materials' : 'Study center'}
+        subtitle={
+          isAdmin
+            ? 'Review the explanations and reference solutions students see.'
+            : 'Your personal notes, plus the official explanation for every problem.'
+        }
+      />
+
+      <div className="mb-8 flex gap-6 border-b border-white/5">
+        {!isAdmin && tabBtn('personal', 'My notes', UserIcon, personalNotes.length)}
+        {tabBtn('study', 'Study notes', BookOpen, studyNotes.length)}
       </div>
 
-      <div style={{ display: 'flex', gap: '15px', marginBottom: '30px', borderBottom: '1px solid var(--glass-border)', paddingBottom: '15px' }}>
-        <button 
-          onClick={() => setActiveTab('admin')} 
-          style={{ 
-            background: 'none', 
-            border: 'none', 
-            color: activeTab === 'admin' ? 'var(--primary)' : '#888', 
-            fontWeight: '700', 
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '8px',
-            fontSize: '16px'
-          }}
-        >
-          <BookOpen size={18} /> {isAdmin ? 'Review Official Notes' : 'Admin Study Notes'}
-        </button>
-        {!isAdmin && (
-          <button 
-            onClick={() => setActiveTab('personal')} 
-            style={{ 
-              background: 'none', 
-              border: 'none', 
-              color: activeTab === 'personal' ? 'var(--primary)' : '#888', 
-              fontWeight: '700', 
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              fontSize: '16px'
-            }}
-          >
-            <UserIcon size={18} /> My Notes
-          </button>
-        )}
-      </div>
+      <Alert type="error" className="mb-6">{error}</Alert>
 
-      {error && <p className="error-box">{error}</p>}
-      {loading ? <p className="info-box">Loading materials...</p> : (
-        <div className="list-grid" style={{ gridTemplateColumns: activeTab === 'admin' ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))' }}>
-          {activeTab === 'admin' ? (
-            adminNotes.length > 0 ? adminNotes.map(note => (
-              <div key={note.id} className="note-card" style={{ padding: '30px', marginBottom: '20px', background: '#1e1e1e', border: '1px solid #333' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', fontWeight: '800', color: 'var(--primary)', textTransform: 'uppercase', letterSpacing: '1px' }}>{note.category}</span>
-                    <h2 style={{ color: '#fff', marginTop: '5px' }}>{note.title}</h2>
-                  </div>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    {isAdmin ? (
-                      <Link to={`/admin/problems/${note.id}/edit`} className="outline-btn" style={{ fontSize: '13px', padding: '8px 16px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--primary)', borderColor: 'var(--primary)' }}>
-                        <Edit3 size={14} /> Edit Notes
-                      </Link>
-                    ) : (
-                      <Link to={`/problems/${note.id}`} className="outline-btn" style={{ fontSize: '13px', padding: '8px 16px' }}>Solve Problem</Link>
-                    )}
-                  </div>
+      {loading ? (
+        <Spinner label="Loading notes..." />
+      ) : tab === 'personal' ? (
+        personalNotes.length ? (
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {personalNotes.map((n) => (
+              <article key={n.id} className="card flex flex-col p-6">
+                <div className="flex items-start justify-between gap-3">
+                  <h3 className="font-bold text-white">{n.problemTitle}</h3>
+                  <DifficultyBadge level={n.difficulty} />
                 </div>
-                
-                {note.explanation && (
-                  <div style={{ marginBottom: '20px' }}>
-                    <h4 style={{ color: '#888', marginBottom: '10px', display: 'flex', alignItems: 'center', gap: '8px' }}><FileText size={16} /> Conceptual Explanation</h4>
-                    <p style={{ color: '#ccc', lineHeight: '1.7', background: 'rgba(255,255,255,0.02)', padding: '20px', borderRadius: '12px' }}>{note.explanation}</p>
-                  </div>
-                )}
-
-                {note.javaSolution && (
-                  <div>
-                    <button 
-                      onClick={() => toggleSolution(note.id)}
-                      style={{ 
-                        background: 'none', 
-                        border: '1px solid rgba(255,255,255,0.1)', 
-                        color: '#888', 
-                        padding: '10px 20px', 
-                        borderRadius: '10px', 
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '8px',
-                        fontSize: '14px',
-                        transition: 'all 0.3s ease'
-                      }}
-                    >
-                      {visibleSolutions[note.id] ? <><EyeOff size={16} /> Hide Implementation Code</> : <><Code size={16} /> View Implementation Code</>}
-                    </button>
-                    
-                    {visibleSolutions[note.id] && (
-                      <div style={{ marginTop: '15px', animation: 'fadeIn 0.3s ease' }}>
-                        <pre style={{ background: '#000', padding: '20px', borderRadius: '12px', color: '#4caf50', overflowX: 'auto', border: '1px solid #222', fontSize: '14px' }}>
-                          {note.javaSolution}
-                        </pre>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
-            )) : <p className="info-box">No study notes uploaded by admin yet.</p>
-          ) : (
-            personalNotes.length > 0 ? personalNotes.map(note => (
-              <div className="note-card" key={note.id} style={{ padding: '24px', background: '#fff', color: '#0b0a1a' }}>
-                <h3 style={{ marginBottom: '10px' }}>{note.problemTitle}</h3>
-                <p style={{ color: '#4b5563', marginBottom: '20px', minHeight: '80px' }}>{note.note}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid #eee', paddingTop: '15px' }}>
-                  <small style={{ color: '#888' }}>{note.updatedAt?.slice(0, 10)}</small>
-                  <Link to={`/problems/${note.problemId}`} className="card-link" style={{ fontSize: '14px', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    Open Problem <ChevronRight size={14} />
+                <p className="mt-3 line-clamp-5 flex-1 whitespace-pre-line text-sm leading-relaxed text-slate-300">{n.note || <em className="text-slate-500">Empty note</em>}</p>
+                <div className="mt-5 flex items-center justify-between border-t border-white/5 pt-4 text-sm">
+                  <span className="text-slate-500">{n.updatedAt?.slice(0, 10)}</span>
+                  <Link to={`/problems/${n.problemId}`} className="flex items-center gap-1 font-semibold text-brand-400 hover:text-brand-300">
+                    Open <ChevronRight size={14} />
                   </Link>
                 </div>
-              </div>
-            )) : <p className="info-box">You haven't saved any personal notes yet.</p>
-          )}
-        </div>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <div className="card">
+            <EmptyState icon={<StickyNote size={24} />} title="No notes yet">
+              Open any problem and use the <b>My notes</b> tab to write down the key idea.
+            </EmptyState>
+          </div>
+        )
+      ) : (
+        <>
+          <div className="relative mb-6 max-w-md">
+            <Search size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+            <input value={filter} onChange={(e) => setFilter(e.target.value)} placeholder="Filter by title or topic..." className="input pl-11" aria-label="Filter study notes" />
+          </div>
+          <div className="space-y-4">
+            {filteredStudy.map((n) => (
+              <article key={n.id} className="card p-6">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <span className="eyebrow tracking-widest">{n.category}</span>
+                    <h2 className="mt-1 text-xl font-bold text-white">{n.title}</h2>
+                  </div>
+                  {isAdmin ? (
+                    <Link to={`/admin/problems/${n.id}/edit`} className="btn-outline py-2 text-xs"><Edit3 size={14} /> Edit</Link>
+                  ) : (
+                    <Link to={`/problems/${n.id}`} className="btn-outline py-2 text-xs">Solve problem</Link>
+                  )}
+                </div>
+
+                {n.explanation && (
+                  <div className="mt-4">
+                    <h3 className="mb-2 flex items-center gap-2 text-sm font-semibold text-slate-400"><FileText size={15} /> Approach</h3>
+                    <p className="rounded-xl bg-white/[0.03] p-4 leading-relaxed text-slate-300">{n.explanation}</p>
+                  </div>
+                )}
+
+                {n.javaSolution && (
+                  <div className="mt-4">
+                    <button onClick={() => setOpen((o) => ({ ...o, [n.id]: !o[n.id] }))} className="btn-ghost -ml-3 text-xs" aria-expanded={!!open[n.id]}>
+                      {open[n.id] ? <><EyeOff size={15} /> Hide code</> : <><Code size={15} /> Show reference code</>}
+                    </button>
+                    {open[n.id] && <pre className="code-block mt-3 animate-fade-in">{n.javaSolution}</pre>}
+                  </div>
+                )}
+              </article>
+            ))}
+            {!filteredStudy.length && <div className="card"><EmptyState title="No study notes match that filter" /></div>}
+          </div>
+        </>
       )}
-      <style>{`
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(-5px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-      `}</style>
-    </section>
+    </PageContainer>
   );
 }

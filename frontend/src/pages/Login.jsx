@@ -1,55 +1,70 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { Lock, LogIn, Mail } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { Mail, Lock, LogIn } from 'lucide-react';
+import { Alert } from '../components/ui';
+import AuthLayout from '../components/AuthLayout';
+
+const DEMO = {
+  user: { email: 'user@example.com', password: 'user123' },
+  admin: { email: 'admin@example.com', password: 'admin123' }
+};
 
 export default function Login() {
-  const [form, setForm] = useState({ email: 'admin@example.com', password: 'admin123' });
+  const [form, setForm] = useState({ email: '', password: '' });
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
-  function handleChange(e) {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  }
+  const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   async function handleSubmit(e) {
     e.preventDefault();
     setError('');
+    setLoading(true);
     try {
       await login(form.email, form.password);
-      navigate('/dashboard');
+      navigate(location.state?.from || '/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <section className="auth-section" style={{ background: 'radial-gradient(circle at center, #1e1e3f 0%, #151335 100%)' }}>
-      <form onSubmit={handleSubmit} className="auth-card" style={{ background: 'rgba(255,255,255,0.02)', backdropFilter: 'blur(10px)', border: '1px solid rgba(255,255,255,0.05)', padding: '40px' }}>
-        <p className="eyebrow dark" style={{ color: '#7567ff' }}>SECURE ACCESS</p>
-        <h1 style={{ color: '#fff', marginBottom: '30px' }}>Welcome Back</h1>
-        
-        <div style={{ position: 'relative', marginBottom: '15px' }}>
-          <Mail style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} size={18} />
-          <input name="email" value={form.email} onChange={handleChange} placeholder="Email" style={{ paddingLeft: '45px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: '#fff' }} />
+    <AuthLayout eyebrow="Welcome back" title="Log in to CodeTrack">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <div className="relative">
+          <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input name="email" type="email" required autoComplete="email" value={form.email} onChange={onChange} placeholder="Email" aria-label="Email" className="input pl-11" />
+        </div>
+        <div className="relative">
+          <Lock size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
+          <input name="password" type="password" required autoComplete="current-password" value={form.password} onChange={onChange} placeholder="Password" aria-label="Password" className="input pl-11" />
         </div>
 
-        <div style={{ position: 'relative', marginBottom: '15px' }}>
-          <Lock style={{ position: 'absolute', left: '15px', top: '50%', transform: 'translateY(-50%)', color: '#666' }} size={18} />
-          <input name="password" type="password" value={form.password} onChange={handleChange} placeholder="Password" style={{ paddingLeft: '45px', background: 'rgba(255,255,255,0.05)', border: '1px solid #333', color: '#fff' }} />
-        </div>
+        <Alert type="error">{error}</Alert>
 
-        {error && <p className="error-box" style={{ marginTop: '10px' }}>{error}</p>}
-        
-        <button className="solid-btn full" style={{ marginTop: '20px', padding: '14px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px' }}>
-          <LogIn size={18} /> Login to Account
+        <button className="btn-primary w-full py-3" disabled={loading}>
+          <LogIn size={18} /> {loading ? 'Logging in...' : 'Log in'}
         </button>
-        
-        <p style={{ marginTop: '25px', textAlign: 'center', color: '#888' }}>
-          Don't have an account? <Link to="/register" style={{ color: '#7567ff', fontWeight: 'bold' }}>Create one now</Link>
-        </p>
       </form>
-    </section>
+
+      <div className="mt-6 rounded-xl border border-white/5 bg-white/[0.03] p-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Try a demo account</p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          <button type="button" onClick={() => setForm(DEMO.user)} className="btn-outline py-2 text-xs">Student demo</button>
+          <button type="button" onClick={() => setForm(DEMO.admin)} className="btn-outline py-2 text-xs">Admin demo</button>
+        </div>
+      </div>
+
+      <p className="mt-6 text-center text-sm text-slate-400">
+        New here?{' '}
+        <Link to="/register" className="font-semibold text-brand-400 hover:text-brand-300">Create an account</Link>
+      </p>
+    </AuthLayout>
   );
 }
