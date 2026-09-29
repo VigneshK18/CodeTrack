@@ -1,7 +1,11 @@
 // Shared column lists. MySQL columns are snake_case; the API returns camelCase.
 
-/** Format a DATETIME/TIMESTAMP column as an ISO-like string the browser can parse. */
-export const isoDate = (column, alias) => `DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%s') AS ${alias}`;
+import { env } from '../config/env.js';
+
+const TZ_SUFFIX = env.db.timeZone === '+00:00' ? 'Z' : env.db.timeZone;
+
+/** Format a TIMESTAMP column as an ISO 8601 string with its offset, so browsers show the right local time. */
+export const isoDate = (column, alias) => `CONCAT(DATE_FORMAT(${column}, '%Y-%m-%dT%H:%i:%s'), '${TZ_SUFFIX}') AS ${alias}`;
 
 // Columns returned in problem lists (lighter: no code template or hidden test cases).
 export const PROBLEM_SUMMARY_COLUMNS = `
@@ -14,7 +18,18 @@ export const PROBLEM_SUMMARY_COLUMNS = `
 
 // Columns returned for a single problem.
 export const PROBLEM_DETAIL_COLUMNS = `${PROBLEM_SUMMARY_COLUMNS},
-  p.default_code_template AS defaultCodeTemplate, p.test_cases_json AS testCasesJson`;
+  p.default_code_template AS defaultCodeTemplate, p.test_cases_json AS testCasesJson,
+  p.driver_code AS driverCode, p.param_names AS paramNames`;
+
+/** Parse a problem's stored test cases: [{ input, output, hidden?, explanation? }]. */
+export function parseTestCases(json) {
+  try {
+    const tests = JSON.parse(json || '[]');
+    return Array.isArray(tests) ? tests.filter((t) => t && typeof t.input === 'string' && typeof t.output === 'string') : [];
+  } catch {
+    return [];
+  }
+}
 
 export const slugify = (text) =>
   String(text || '')

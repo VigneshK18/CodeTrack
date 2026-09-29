@@ -18,6 +18,13 @@ export default function Login() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const from = location.state?.from;
+  const reason = from?.startsWith('/problems/')
+    ? "Log in to solve this problem. You'll go straight to it afterwards."
+    : from
+      ? 'Please log in to continue.'
+      : '';
+
   const onChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
   async function handleSubmit(e) {
@@ -26,7 +33,7 @@ export default function Login() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      navigate(location.state?.from || '/dashboard', { replace: true });
+      navigate(from || '/dashboard', { replace: true });
     } catch (err) {
       setError(err.message);
     } finally {
@@ -36,6 +43,7 @@ export default function Login() {
 
   return (
     <AuthLayout eyebrow="Welcome back" title="Log in to CodeTrack">
+      <Alert type="info" className="mb-5">{reason}</Alert>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="relative">
           <Mail size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -63,7 +71,7 @@ export default function Login() {
 
       <p className="mt-6 text-center text-sm text-slate-400">
         New here?{' '}
-        <Link to="/register" className="font-semibold text-brand-400 hover:text-brand-300">Create an account</Link>
+        <Link to="/register" state={location.state} className="font-semibold text-brand-400 hover:text-brand-300">Create an account</Link>
       </p>
     </AuthLayout>
   );

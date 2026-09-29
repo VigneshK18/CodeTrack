@@ -118,7 +118,7 @@ function UserDashboard({ stats, name }) {
         <StatCard label="Solved" value={`${stats.solvedProblems}/${stats.totalProblems}`} helper={`${pct}% of the library`} icon={<CheckCircle2 size={18} />} />
         <StatCard label="Current streak" value={stats.currentStreak} helper={stats.currentStreak === 1 ? 'day' : 'days'} icon={<Flame size={18} />} />
         <StatCard label="Longest streak" value={stats.longestStreak ?? stats.currentStreak} helper="days in a row" icon={<Trophy size={18} />} />
-        <StatCard label="Active days" value={stats.submissionDates?.length || 0} helper="days with a solve" icon={<CalendarDays size={18} />} />
+        <StatCard label="Submissions" value={stats.totalSubmissions} helper={`${stats.acceptedSubmissions} accepted`} icon={<CalendarDays size={18} />} />
       </div>
 
       <div className="mt-6 grid gap-5 lg:grid-cols-3 lg:items-start">
@@ -164,9 +164,12 @@ function UserDashboard({ stats, name }) {
       <div className="card mt-6 p-6">
         <div className="mb-5 flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-lg font-bold text-white">
-            <span className="text-2xl font-black">{stats.solvedProblems}</span> problems solved in the past year
+            <span className="text-2xl font-black">{stats.totalSubmissions}</span> submissions in the past year
           </h2>
-          <span className="text-sm text-slate-400">{stats.submissionDates?.length || 0} active days</span>
+          <span className="text-sm text-slate-400">
+            {stats.submissionDates?.length || 0} active days
+            {stats.totalSubmissions > 0 && ` · ${Math.round((stats.acceptedSubmissions / stats.totalSubmissions) * 100)}% accepted`}
+          </span>
         </div>
         <ActivityHeatmap counts={stats.activityCounts} />
       </div>

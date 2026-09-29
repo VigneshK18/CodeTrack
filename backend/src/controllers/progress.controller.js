@@ -1,5 +1,4 @@
 import { query, queryOne } from '../config/db.js';
-import { notFound, parseId } from '../utils/http.js';
 import { isoDate } from '../utils/sql.js';
 
 /** Insert or refresh a SOLVED row for this user/problem. Used by the code runner too. */
@@ -12,16 +11,6 @@ export async function markProblemSolved(userId, problemId) {
   );
 }
 
-// POST /api/progress/solved/:problemId
-export async function markSolved(req, res) {
-  const problemId = parseId(req.params.problemId, 'problemId');
-  const problem = await queryOne('SELECT id FROM problems WHERE id = :problemId', { problemId });
-  if (!problem) throw notFound('Problem not found');
-
-  await markProblemSolved(req.user.id, problemId);
-  res.json({ message: 'Problem marked as solved', problemId });
-}
-
 // GET /api/progress/solved-ids
 export async function solvedIds(req, res) {
   const rows = await query(
@@ -29,6 +18,20 @@ export async function solvedIds(req, res) {
     { userId: req.user.id }
   );
   res.json(rows.map((r) => Number(r.id)));
+}
+
+// GET /api/progress/statuses -> { solved: [ids], attempted: [ids] } (attempted = submitted but never accepted)
+export async function statuses(req, res) {
+  const [solved, attempted] = await Promise.all([
+    query("SELECT problem_id AS id FROM user_progress WHERE user_id = :userId AND status = 'SOLVED'", { userId: req.user.id }),
+    query(
+      `SELECT DISTINCT s.problem_id AS id FROM submissions s
+       WHERE s.user_id = :userId
+         AND NOT EXISTS (SELECT 1 FROM user_progress up WHERE up.user_id = s.user_id AND up.problem_id = s.problem_id AND up.status = 'SOLVED')`,
+      { userId: req.user.id }
+    )
+  ]);
+  res.json({ solved: solved.map((r) => Number(r.id)), attempted: attempted.map((r) => Number(r.id)) });
 }
 
 /** Count consecutive days (ending today, or yesterday if nothing solved today). */
@@ -90,10 +93,15 @@ export async function stats(req, res) {
        GROUP BY 1 ORDER BY 1`,
       { userId }
     ),
+    // activity = submissions per day (like LeetCode's heatmap); users without submissions fall back to solve dates
     query(
-      `SELECT DATE_FORMAT(solved_at, '%Y-%m-%d') AS day, COUNT(*) AS solved
-       FROM user_progress WHERE user_id = :userId AND status = 'SOLVED'
-       GROUP BY day ORDER BY day`,
+      `SELECT day, SUM(n) AS solved FROM (
+         SELECT DATE_FORMAT(created_at, '%Y-%m-%d') AS day, COUNT(*) AS n FROM submissions WHERE user_id = :userId GROUP BY day
+         UNION ALL
+         SELECT DATE_FORMAT(solved_at, '%Y-%m-%d') AS day, 1 AS n FROM user_progress up
+         WHERE up.user_id = :userId AND up.status = 'SOLVED'
+           AND NOT EXISTS (SELECT 1 FROM submissions s WHERE s.user_id = :userId)
+       ) t GROUP BY day ORDER BY day`,
       { userId }
     ),
     query(
@@ -103,7 +111,12 @@ export async function stats(req, res) {
        ORDER BY up.solved_at DESC LIMIT 5`,
       { userId }
     ),
-    queryOne("SELECT DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d') AS today")
+    queryOne(
+      `SELECT DATE_FORMAT(CURRENT_DATE, '%Y-%m-%d') AS today,
+              (SELECT COUNT(*) FROM submissions WHERE user_id = :userId) AS totalSubmissions,
+              (SELECT COUNT(*) FROM submissions WHERE user_id = :userId AND status = 'Accepted') AS acceptedSubmissions`,
+      { userId }
+    )
   ]);
 
   const solvedFor = (level) => Number(byDifficulty.find((r) => r.difficulty === level)?.solved || 0);
@@ -123,6 +136,8 @@ export async function stats(req, res) {
     categorySolved: toMap(categorySolved, 'solved'),
     recentActivities: recent.map((r) => ({ ...r, id: Number(r.id) })),
     submissionDates,
-    activityCounts: Object.fromEntries(dateRows.map((r) => [r.day, Number(r.solved)]))
+    activityCounts: Object.fromEntries(dateRows.map((r) => [r.day, Number(r.solved)])),
+    totalSubmissions: Number(todayRow.totalSubmissions),
+    acceptedSubmissions: Number(todayRow.acceptedSubmissions)
   });
 }

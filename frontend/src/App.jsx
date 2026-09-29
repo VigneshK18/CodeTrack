@@ -9,7 +9,7 @@ import { Spinner } from './components/ui';
 
 // Heavier pages (charts, code editor) load on demand to keep the first page fast.
 const Problems = lazy(() => import('./pages/Problems'));
-const ProblemDetails = lazy(() => import('./pages/ProblemDetails'));
+const ProblemWorkspace = lazy(() => import('./pages/ProblemWorkspace'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Login = lazy(() => import('./pages/Login'));
 const Register = lazy(() => import('./pages/Register'));
@@ -32,7 +32,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/problems" element={<Problems />} />
-          <Route path="/problems/:id" element={<ProblemDetails />} />
+          <Route path="/problems/:id" element={<ProtectedRoute><ProblemWorkspace /></ProtectedRoute>} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
 

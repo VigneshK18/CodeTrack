@@ -21,7 +21,9 @@ export const env = {
     // Cloud MySQL hosts (Aiven, TiDB, PlanetScale...) require SSL.
     ssl: (process.env.DB_SSL || 'false').toLowerCase() === 'true',
     // Optional CA certificate (PEM). "\n" sequences are converted to real newlines.
-    sslCa: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined
+    sslCa: process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined,
+    // Time zone for dates, streaks and the activity heatmap, e.g. +05:30 for India
+    timeZone: /^[+-]\d{2}:\d{2}$/.test(process.env.DB_TIMEZONE || '') ? process.env.DB_TIMEZONE : '+00:00'
   },
 
   jwt: {
@@ -37,8 +39,11 @@ export const env = {
   autoSeed: (process.env.AUTO_SEED || 'true').toLowerCase() !== 'false',
 
   runner: {
-    runTimeoutMs: Number(process.env.RUN_TIMEOUT_MS || 5000),
-    compileTimeoutMs: Number(process.env.COMPILE_TIMEOUT_MS || 15000),
+    // CPU-time limit per test case (like LeetCode's time limit)
+    runTimeoutMs: Number(process.env.RUN_TIMEOUT_MS || 2000),
+    compileTimeoutMs: Number(process.env.COMPILE_TIMEOUT_MS || 30000),
+    // How many submissions may be judged at the same time (each uses up to 256 MB)
+    concurrency: Math.max(1, Number(process.env.JUDGE_CONCURRENCY || 1)),
     javaBin: process.env.JAVA_BIN || 'java',
     javacBin: process.env.JAVAC_BIN || 'javac'
   }

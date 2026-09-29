@@ -2,6 +2,7 @@ import app from './app.js';
 import { env } from './config/env.js';
 import { pool } from './config/db.js';
 import { setupDatabase } from './db/setup.js';
+import { ensureHarness } from './services/judge.js';
 
 async function start() {
   if (env.autoSeed) {
@@ -13,6 +14,11 @@ async function start() {
   const server = app.listen(env.port, () => {
     console.log(`CodeTrack API running on http://localhost:${env.port}`);
   });
+
+  // Compile the Java judge in the background so the first submission is fast
+  ensureHarness()
+    .then(({ javaMajor }) => console.log(`Java judge ready (Java ${javaMajor})`))
+    .catch((err) => console.error('Java judge unavailable:', err.message));
 
   const shutdown = () => {
     server.close(async () => {

@@ -22,15 +22,16 @@ router.get('/auth/profile', authenticate, h(auth.profile));
 // Problems (read is public, write is admin only)
 router.get('/problems', h(problems.listProblems));
 router.get('/problems/categories', h(problems.listCategories));
-router.get('/problems/:id', h(problems.getProblem));
+router.get('/problems/random', h(problems.randomProblem));
+router.get('/problems/:id', optionalAuth, h(problems.getProblem));
 router.post('/problems', authenticate, requireAdmin, h(problems.createProblem));
 router.put('/problems/:id', authenticate, requireAdmin, h(problems.updateProblem));
 router.delete('/problems/:id', authenticate, requireAdmin, h(problems.deleteProblem));
 
 // Progress
-router.post('/progress/solved/:problemId', authenticate, h(progress.markSolved));
 router.get('/progress/solved-ids', authenticate, h(progress.solvedIds));
 router.get('/progress/stats', authenticate, h(progress.stats));
+router.get('/progress/statuses', authenticate, h(progress.statuses));
 
 // Notes
 router.get('/notes', authenticate, h(notes.listNotes));
@@ -44,7 +45,19 @@ router.get('/bookmarks/ids', authenticate, h(bookmarks.bookmarkIds));
 router.post('/bookmarks/:problemId', authenticate, h(bookmarks.addBookmark));
 router.delete('/bookmarks/:problemId', authenticate, h(bookmarks.removeBookmark));
 
-// Java code execution (guests can run code; only logged-in users get progress)
-router.post('/execution/run', limiter(15, 'Too many runs, wait a moment and try again'), optionalAuth, h(execution.runCode));
+// Judge: Run checks the examples (or custom inputs); Submit checks every test case and is saved
+const judgeLimit = rateLimit({
+  windowMs: 60_000,
+  max: Number(process.env.JUDGE_RATE_LIMIT || 15), // runs + submissions per user per minute
+  keyGenerator: (req) => `user:${req.user?.id}`,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { message: 'Too many runs, wait a moment and try again' }
+});
+router.post('/execution/run', authenticate, judgeLimit, h(execution.runCode));
+router.post('/execution/expected', authenticate, requireAdmin, judgeLimit, h(execution.generateExpected));
+router.post('/submissions', authenticate, judgeLimit, h(execution.submitCode));
+router.get('/submissions', authenticate, h(execution.listSubmissions));
+router.get('/submissions/:id', authenticate, h(execution.getSubmission));
 
 export default router;

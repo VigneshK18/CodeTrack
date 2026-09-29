@@ -23,6 +23,11 @@ export const pool = mysql.createPool({
   charset: 'utf8mb4'
 });
 
+// Every connection uses the same time zone, so dates and "today" are consistent.
+pool.pool.on('connection', (conn) => {
+  conn.query(`SET time_zone = '${env.db.timeZone}'`);
+});
+
 /** Run a query and return only the rows. */
 export async function query(sql, params = {}) {
   const [rows] = await pool.query(sql, params);

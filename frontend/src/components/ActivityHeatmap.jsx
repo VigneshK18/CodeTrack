@@ -31,7 +31,7 @@ export default function ActivityHeatmap({ counts = {} }) {
   return (
     <div>
       <div className="overflow-x-auto pb-2">
-        <div className="inline-flex gap-[3px]" role="img" aria-label="Daily solved problems over the past year">
+        <div className="inline-flex gap-[3px]" role="img" aria-label="Daily submissions over the past year">
           {weeks.map((days, wi) => {
             const first = days[0];
             const showMonth = first.getDate() <= 7;
@@ -47,7 +47,7 @@ export default function ActivityHeatmap({ counts = {} }) {
                   return (
                     <span
                       key={key}
-                      title={future ? '' : `${date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}: ${count} solved`}
+                      title={future ? '' : `${date.toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' })}: ${count} submission${count === 1 ? '' : 's'}`}
                       className="h-3.5 w-3.5 rounded-[3px] transition hover:ring-2 hover:ring-white/40"
                       style={{ background: future ? 'transparent' : colorFor(count) }}
                     />

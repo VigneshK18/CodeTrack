@@ -14,6 +14,10 @@ RUN cd backend && npm ci --omit=dev
 COPY backend backend
 COPY database database
 
+# Pre-compile the Java judge so the first submission does not have to
+RUN mkdir -p /app/judge-classes && javac -nowarn -encoding UTF-8 -d /app/judge-classes backend/judge/*.java
+ENV JUDGE_CLASSES_DIR=/app/judge-classes
+
 WORKDIR /app/backend
 ENV NODE_ENV=production \
     PORT=8080

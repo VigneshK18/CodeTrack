@@ -32,7 +32,9 @@ CREATE TABLE IF NOT EXISTS problems (
   explanation            TEXT,
   java_solution          TEXT,
   default_code_template  TEXT,
-  test_cases_json        TEXT,
+  driver_code            TEXT,
+  param_names            VARCHAR(255),
+  test_cases_json        MEDIUMTEXT,
   time_complexity        VARCHAR(100),
   space_complexity       VARCHAR(100),
   created_at             TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -73,4 +75,26 @@ CREATE TABLE IF NOT EXISTS bookmarks (
   UNIQUE KEY uq_bookmarks_user_problem (user_id, problem_id),
   CONSTRAINT fk_bookmarks_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
   CONSTRAINT fk_bookmarks_problem FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS submissions (
+  id            BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id       BIGINT NOT NULL,
+  problem_id    BIGINT NOT NULL,
+  status        VARCHAR(30) NOT NULL,
+  passed_count  INT NOT NULL DEFAULT 0,
+  total_count   INT NOT NULL DEFAULT 0,
+  runtime_ms    INT,
+  language      VARCHAR(20) NOT NULL DEFAULT 'java',
+  code          MEDIUMTEXT NOT NULL,
+  created_at    TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_submissions_user_problem (user_id, problem_id, created_at),
+  INDEX idx_submissions_problem_status (problem_id, status),
+  CONSTRAINT fk_submissions_user    FOREIGN KEY (user_id)    REFERENCES users(id)    ON DELETE CASCADE,
+  CONSTRAINT fk_submissions_problem FOREIGN KEY (problem_id) REFERENCES problems(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS app_meta (
+  meta_key    VARCHAR(100) PRIMARY KEY,
+  meta_value  VARCHAR(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
